@@ -26,6 +26,61 @@ def generate_random_symmetric_matrix(n, a=100, b=1000):
     return A
 
 
+def checkIfUpperTriangularMatrix(A):
+    """
+    Sprawdza, czy macierz jest trójkątna górna.
+    """
+    rows = len(A)
+    for i in range(rows):
+        for j in range(i):
+            if A[i][j] != 0:
+                return False
+    return True
+
+
+def checkIfLowerTriangularMatrix(A):
+    """
+    Sprawdza, czy macierz jest trójkątna dolna.
+    """
+    rows = len(A)
+    for i in range(rows):
+        for j in range(i + 1, len(A[i])):
+            if A[i][j] != 0:
+                return False
+    return True
+
+
+def getDiagonal(A):
+    """
+    Zwraca diagonalę macierzy.
+    """
+    n = len(A)
+    diagonal = [0] * n
+    for i in range(n):
+        diagonal[i] = A[i][i]
+    return diagonal
+
+
+def matrixNorm(A):
+    """
+    Zwraca normę (maksium) macierzy.
+
+    :param A: Macierz wejściowa.
+    :type A: list of lists
+    :return: Norma macierzy.
+    :rtype: float
+    """
+    n = len(A)
+    max_sum = 0
+    for i in range(n):
+        sum = 0
+        for j in range(n):
+            sum += abs(A[i][j])
+        if sum > max_sum:
+            max_sum = sum
+    return max_sum
+
+
 def upperTriangleMatrixSolver(u, b: list) -> list:
     """
     Rozwiązuje układ równań dla macierzy trójkątnej górnej.
@@ -172,26 +227,6 @@ def horner(A, x0):
     return coefficients[1:]
 
 
-def matrixNorm(A):
-    """
-    Zwraca normę (maksium) macierzy.
-
-    :param A: Macierz wejściowa.
-    :type A: list of lists
-    :return: Norma macierzy.
-    :rtype: float
-    """
-    n = len(A)
-    max_sum = 0
-    for i in range(n):
-        sum = 0
-        for j in range(n):
-            sum += abs(A[i][j])
-        if sum > max_sum:
-            max_sum = sum
-    return max_sum
-
-
 def calculateEigenValues(characteristic_polynomial, epsilon, x1, x2):
     """
     Oblicza wartości własne macierzy na podstawie wielomianu charakterystycznego.
@@ -227,6 +262,7 @@ def checkEigenValues(A, eigen_values: list, epsilon: float):
     """
     control_eigen_values = np.linalg.eig(A)[0]
     control_eigen_values.sort()
+    # sortuję wartości własne dla łatwiejszego porównania
     print("Uzyskane wartości własne:")
     print(eigen_values)
     print("Sprawdzenie:")
@@ -253,6 +289,7 @@ def krylow(A):
     n = len(A)
     b = [0.0] * n
     b[0] = 1
+    # b - nie zerowy wektor początkowy
     matrix1 = [[0.0] * n for _ in range(n)]
     matrix1[0] = b
     for i in range(1, n):
@@ -261,9 +298,12 @@ def krylow(A):
     rightSide = -np.dot(A, matrix1[0])
     matrix_to_solve = matrix1
     matrix_to_solve.append(rightSide)
+    # dopisuję wektor wyników (rightSide) do macierzy
     extended_matrix_to_solve = np.array(matrix_to_solve).transpose()
     extended_triangle_matrix = matrixSolver(extended_matrix_to_solve)
+    # dzielę macierz na macierz trójkątną górną i wektor wyników
     y, triangle_Matrix = extractVectorFromMatrix(extended_triangle_matrix)
+    # rozwiązuję układ równań dla macierzy trójkątnej górnej
     characteristic_polynomial = upperTriangleMatrixSolver(triangle_Matrix, y)
     return characteristic_polynomial
 
@@ -295,6 +335,8 @@ def eigenVector(A, eigen_value):
     I = np.identity(n)
     B = np.array(A) - eigen_value * I
     y = [0] * n
+    # Ustawiam ostatni element wektora wynikowego na 1, aby
+    # uniknąć rozwiązania zerowego.
     y[-1] = 1
     B = B.transpose()
     B = matrixSolver(B.tolist())
@@ -302,41 +344,6 @@ def eigenVector(A, eigen_value):
     vector_norm = vectorNorm(x)
     x = [round(i / vector_norm, 6) for i in x]
     return x
-
-
-def checkIfUpperTriangularMatrix(A):
-    """
-    Sprawdza, czy macierz jest trójkątna górna.
-    """
-    rows = len(A)
-    for i in range(rows):
-        for j in range(i):
-            if A[i][j] != 0:
-                return False
-    return True
-
-
-def checkIfLowerTriangularMatrix(A):
-    """
-    Sprawdza, czy macierz jest trójkątna dolna.
-    """
-    rows = len(A)
-    for i in range(rows):
-        for j in range(i + 1, len(A[i])):
-            if A[i][j] != 0:
-                return False
-    return True
-
-
-def getDiagonal(A):
-    """
-    Zwraca diagonalę macierzy.
-    """
-    n = len(A)
-    diagonal = [0] * n
-    for i in range(n):
-        diagonal[i] = A[i][i]
-    return diagonal
 
 
 def Ropelewski_Adam_(A, epsilon=1e-6):
@@ -350,15 +357,15 @@ def Ropelewski_Adam_(A, epsilon=1e-6):
     :return: Wartości własne i wektory własne macierzy.
     :rtype: tuple
     """
-    lower = checkIfLowerTriangularMatrix(A)
-    upper = checkIfUpperTriangularMatrix(A)
+    isLowerTriangular = checkIfLowerTriangularMatrix(A)
+    isUpperTriangular = checkIfUpperTriangularMatrix(A)
     isSymetric = True
-    idDiagonal = False
-    if lower or upper:
+    isDiagonal = False
+    if isLowerTriangular or isUpperTriangular:
         eigenValues = getDiagonal(A)
         isSymetric = False
-        if lower and upper:
-            idDiagonal = True
+        if isLowerTriangular and isUpperTriangular:
+            isDiagonal = True
     else:
         characteristic_polynomial = krylow(A)
         matrix_norm_value = matrixNorm(A)
@@ -372,9 +379,10 @@ def Ropelewski_Adam_(A, epsilon=1e-6):
 
     eigenValues.sort()
     checkEigenValues(A, eigenValues, epsilon)
+    # Wektory własne: #
     if not isSymetric:
         # Jeśli macierz nie jest symetryczna, to nie szukam wektorów własnych
-        if idDiagonal:
+        if isDiagonal:
             # Jeśli macierz jest diagonalna, to wektory własne są wektorami bazowymi
             return eigenValues, [
                 [1 if i == j else 0 for j in range(len(A))] for i in range(len(A))
