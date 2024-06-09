@@ -304,9 +304,44 @@ def eigenVector(A, eigen_value):
     return x
 
 
+def checkIfUpperTriangularMatrix(A):
+    """
+    Sprawdza, czy macierz jest trójkątna górna.
+    """
+    rows = len(A)
+    for i in range(rows):
+        for j in range(i):
+            if A[i][j] != 0:
+                return False
+    return True
+
+
+def checkIfLowerTriangularMatrix(A):
+    """
+    Sprawdza, czy macierz jest trójkątna dolna.
+    """
+    rows = len(A)
+    for i in range(rows):
+        for j in range(i + 1, len(A[i])):
+            if A[i][j] != 0:
+                return False
+    return True
+
+
+def getDiagonal(A):
+    """
+    Zwraca diagonalę macierzy.
+    """
+    n = len(A)
+    diagonal = [0] * n
+    for i in range(n):
+        diagonal[i] = A[i][i]
+    return diagonal
+
+
 def Ropelewski_Adam_(A, epsilon=1e-6):
     """
-    Oblicza wartości własne oraz wektory własne macierzy kwadratowej, symetrycznej.
+    Oblicza wartości własne oraz wektory własne macierzy symetrycznej.
 
     :param A: Macierz kwadratowa, symetryczna.
     :type A: list of lists
@@ -315,17 +350,38 @@ def Ropelewski_Adam_(A, epsilon=1e-6):
     :return: Wartości własne i wektory własne macierzy.
     :rtype: tuple
     """
-    characteristic_polynomial = krylow(A)
-    matrix_norm_value = matrixNorm(A)
-    print(f"Norma macierzy: {matrix_norm_value}")
-    x1, x2 = find_root_interval(
-        -matrix_norm_value, matrix_norm_value, characteristic_polynomial
-    )
-    if x1 is None or x2 is None:
-        raise ValueError("Nie znaleziono przedziału dla metody siecznych.")
-    eigenValues = calculateEigenValues(characteristic_polynomial, epsilon, x1, x2)
+    lower = checkIfLowerTriangularMatrix(A)
+    upper = checkIfUpperTriangularMatrix(A)
+    isSymetric = True
+    idDiagonal = False
+    if lower or upper:
+        eigenValues = getDiagonal(A)
+        isSymetric = False
+        if lower and upper:
+            idDiagonal = True
+    else:
+        characteristic_polynomial = krylow(A)
+        matrix_norm_value = matrixNorm(A)
+        print(f"Norma macierzy: {matrix_norm_value}")
+        x1, x2 = find_root_interval(
+            -matrix_norm_value, matrix_norm_value, characteristic_polynomial
+        )
+        if x1 is None or x2 is None:
+            raise ValueError("Nie znaleziono przedziału dla metody siecznych.")
+        eigenValues = calculateEigenValues(characteristic_polynomial, epsilon, x1, x2)
+
     eigenValues.sort()
     checkEigenValues(A, eigenValues, epsilon)
+    if not isSymetric:
+        # Jeśli macierz nie jest symetryczna, to nie szukam wektorów własnych
+        if idDiagonal:
+            # Jeśli macierz jest diagonalna, to wektory własne są wektorami bazowymi
+            return eigenValues, [
+                [1 if i == j else 0 for j in range(len(A))] for i in range(len(A))
+            ]
+        return eigenValues, [
+            "Macierz nie jest symetryczna. Nie szukam wektorów własnych."
+        ]
     list_of_eigen_vectors = []
     for eigenValue in eigenValues:
         list_of_eigen_vectors.append(eigenVector(A, eigenValue))
@@ -333,9 +389,13 @@ def Ropelewski_Adam_(A, epsilon=1e-6):
 
 
 if __name__ == "__main__":
-    A = [[2, 1, 2], [1, 2, 1], [2, 1, 1]]
+    # A = [[2, 1, 2], [1, 2, 1], [2, 1, 1]]
+    # A = [[2, 1, 2], [0, 2, 1], [0, 0, 1]]
+    # A = np.identity(12) * 6
     n = 6
+
     A = generate_random_symmetric_matrix(n, 100, 1000)
+
     epsilon = 1e-8
     current_time = time.time()
     eigenValues, list_of_eigen_vectors = Ropelewski_Adam_(A, epsilon)
